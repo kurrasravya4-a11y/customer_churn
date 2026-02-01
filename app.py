@@ -1,45 +1,30 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
 
-st.set_page_config(page_title="Customer Churn Analytics & Prediction", layout="wide")
+st.set_page_config(page_title="Telecom AI Churn Studio", layout="wide")
 
 # =========================
-# Custom CSS Styling
+# Custom Dark Theme Styling
 # =========================
 st.markdown("""
 <style>
-.main {background-color: #f7f9fc;}
-h1 {color: #0f172a; font-weight: 800;}
-h2, h3 {color: #1e293b;}
-
-.metric-box {
-    background-color: white;
+body {background-color: #0f172a; color: white;}
+.main {background-color: #0f172a;}
+h1, h2, h3 {color: #38bdf8;}
+.stButton>button {
+    background-color: #38bdf8;
+    color: black;
+    border-radius: 10px;
+    font-weight: bold;
+}
+.card {
+    background-color: #1e293b;
     padding: 20px;
     border-radius: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    text-align: center;
-}
-
-.metric-title {
-    font-size: 16px;
-    color: #64748b;
-}
-
-.metric-value {
-    font-size: 28px;
-    font-weight: bold;
-    color: #0f172a;
-}
-
-.section-card {
-    background-color: white;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    margin-bottom: 20px;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
 }
 </style>
 """, unsafe_allow_html=True)
@@ -51,155 +36,98 @@ df = pd.read_csv("Telco_customer_churn.csv")
 model = joblib.load("churn_model.pkl")
 preprocessor = joblib.load("preprocessor.pkl")
 model_columns = joblib.load("model_columns.pkl")
-cat_cols = joblib.load("cat_cols.pkl")
 num_cols = joblib.load("num_cols.pkl")
 metrics_df = pd.read_csv("model_metrics.csv")
 
+st.title("🚀 Telecom AI Churn Studio")
+
+menu = st.sidebar.selectbox("Navigation", 
+                            ["📊 Dashboard", 
+                             "📈 Data Insights", 
+                             "🤖 Model Evaluation", 
+                             "🔮 Smart Prediction"])
+
 # =========================
-# Sidebar Navigation
+# DASHBOARD PAGE
 # =========================
-st.sidebar.title("📌 Navigation")
-page = st.sidebar.radio("Select Page", ["Overview", "EDA", "Model Metrics", "Prediction"])
+if menu == "📊 Dashboard":
 
-st.title("📊 Telecom Customer Churn Analysis & Prediction System")
-
-# =========================
-# OVERVIEW PAGE
-# =========================
-if page == "Overview":
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.header("📌 Project Overview")
-
-    st.markdown("""
-    **Objective:**  
-    To predict whether a telecom customer is likely to churn (leave the service) using Machine Learning.
-
-    **Problem Type:**  
-    Binary Classification (Churn: Yes / No)
-
-    **Final Model Used:**  
-    Optimized Random Forest Classifier (with SMOTE & GridSearchCV)
-    """)
-
-    clean_df = df.drop(columns=["Churn Reason"])
-    clean_df["Total Charges"] = pd.to_numeric(clean_df["Total Charges"], errors="coerce")
-    clean_df["Total Charges"] = clean_df["Total Charges"].fillna(clean_df["Total Charges"].median())
+    total_customers = df.shape[0]
+    churn_rate = round((df["Churn Value"].mean()) * 100, 2)
+    avg_monthly = round(df["Monthly Charges"].mean(), 2)
 
     col1, col2, col3 = st.columns(3)
 
-    with col1:
-        st.markdown(f"""
-        <div class="metric-box">
-            <div class="metric-title">Total Rows</div>
-            <div class="metric-value">{df.shape[0]}</div>
-        </div>
-        """, unsafe_allow_html=True)
+    col1.metric("👥 Total Customers", total_customers)
+    col2.metric("📉 Churn Rate", f"{churn_rate}%")
+    col3.metric("💰 Avg Monthly Charges", f"${avg_monthly}")
 
-    with col2:
-        st.markdown(f"""
-        <div class="metric-box">
-            <div class="metric-title">Total Columns</div>
-            <div class="metric-value">{df.shape[1]}</div>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown("### Customer Distribution")
 
-    with col3:
-        st.markdown(f"""
-        <div class="metric-box">
-            <div class="metric-title">Missing Values (After Cleaning)</div>
-            <div class="metric-value">{int(clean_df.isnull().sum().sum())}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.subheader("📄 Top 20 Rows Preview")
-    st.dataframe(df.head(20))
-
-    st.subheader("📈 Summary Statistics")
-    st.dataframe(clean_df.describe())
-
-    st.markdown('</div>', unsafe_allow_html=True)
+    fig = px.pie(df, names="Churn Label", hole=0.5,
+                 color_discrete_sequence=["#38bdf8", "#f87171"])
+    st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# EDA PAGE
+# DATA INSIGHTS PAGE
 # =========================
-elif page == "EDA":
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.header("📈 Exploratory Data Analysis (EDA)")
+elif menu == "📈 Data Insights":
 
-    churn_counts = df["Churn Label"].value_counts()
-    fig1, ax1 = plt.subplots()
-    ax1.bar(churn_counts.index, churn_counts.values)
-    ax1.set_title("Churn Distribution")
-    st.pyplot(fig1)
+    st.subheader("Tenure Impact on Churn")
+    fig1 = px.box(df, x="Churn Label", y="Tenure Months",
+                  color="Churn Label",
+                  color_discrete_sequence=["#38bdf8", "#f87171"])
+    st.plotly_chart(fig1, use_container_width=True)
 
-    fig2, ax2 = plt.subplots()
-    sns.boxplot(x="Churn Label", y="Tenure Months", data=df, ax=ax2)
-    ax2.set_title("Tenure vs Churn")
-    st.pyplot(fig2)
+    st.subheader("Monthly Charges Distribution")
+    fig2 = px.histogram(df, x="Monthly Charges", color="Churn Label",
+                        barmode="overlay",
+                        color_discrete_sequence=["#38bdf8", "#f87171"])
+    st.plotly_chart(fig2, use_container_width=True)
 
-    fig3, ax3 = plt.subplots()
-    sns.boxplot(x="Churn Label", y="Monthly Charges", data=df, ax=ax3)
-    ax3.set_title("Monthly Charges vs Churn")
-    st.pyplot(fig3)
-
-    fig4, ax4 = plt.subplots()
-    sns.countplot(x="Contract", hue="Churn Label", data=df, ax=ax4)
-    ax4.set_title("Contract Type vs Churn")
-    plt.xticks(rotation=30)
-    st.pyplot(fig4)
-
-    corr_df = df[["Tenure Months", "Monthly Charges", "Total Charges", "CLTV", "Churn Value"]].copy()
-    corr_df["Total Charges"] = pd.to_numeric(corr_df["Total Charges"], errors="coerce")
-
-    fig5, ax5 = plt.subplots(figsize=(8, 5))
-    sns.heatmap(corr_df.corr(), annot=True, cmap="coolwarm", ax=ax5)
-    ax5.set_title("Correlation Heatmap")
-    st.pyplot(fig5)
-
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.subheader("Contract Type vs Churn")
+    fig3 = px.histogram(df, x="Contract", color="Churn Label",
+                        barmode="group",
+                        color_discrete_sequence=["#38bdf8", "#f87171"])
+    st.plotly_chart(fig3, use_container_width=True)
 
 # =========================
-# MODEL METRICS PAGE
+# MODEL EVALUATION PAGE
 # =========================
-elif page == "Model Metrics":
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.header("🤖 Model Performance & Comparison")
+elif menu == "🤖 Model Evaluation":
 
-    comparison_df = metrics_df.copy()
-    if "Model" in comparison_df.columns:
-        comparison_df.set_index("Model", inplace=True)
-
-    st.dataframe(comparison_df.round(4), use_container_width=True)
+    st.dataframe(metrics_df.round(4), use_container_width=True)
 
     st.subheader("Confusion Matrix")
-    st.image("confusion_matrix.png")
+    st.image("confusion_matrix.png", use_column_width=True)
 
     st.subheader("ROC Curve")
-    st.image("roc_curve.png")
-
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.image("roc_curve.png", use_column_width=True)
 
 # =========================
-# PREDICTION PAGE
+# SMART PREDICTION PAGE
 # =========================
-elif page == "Prediction":
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.header("🔮 Customer Churn Prediction")
+elif menu == "🔮 Smart Prediction":
+
+    st.subheader("Enter Customer Details")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        tenure = st.number_input("Tenure Months", 0, 100, 12)
-        monthly = st.number_input("Monthly Charges", 0.0, 500.0, 70.0)
+        tenure = st.slider("Tenure Months", 0, 100, 12)
+        monthly = st.slider("Monthly Charges", 0, 500, 70)
         total = st.number_input("Total Charges", 0.0, 20000.0, 1000.0)
 
     with col2:
-        contract = st.selectbox("Contract", ["Month-to-month", "One year", "Two year"])
-        internet = st.selectbox("Internet Service", ["DSL", "Fiber optic", "No"])
+        contract = st.selectbox("Contract Type",
+                                ["Month-to-month", "One year", "Two year"])
+        internet = st.selectbox("Internet Service",
+                                ["DSL", "Fiber optic", "No"])
 
-    if st.button("Predict Churn"):
+    if st.button("Analyze Customer"):
 
-        input_dict = {col: 0 if col in num_cols else "Unknown" for col in model_columns}
+        input_dict = {col: 0 if col in num_cols else "Unknown"
+                      for col in model_columns}
 
         input_dict["Tenure Months"] = tenure
         input_dict["Monthly Charges"] = monthly
@@ -208,19 +136,25 @@ elif page == "Prediction":
         input_dict["Internet Service"] = internet
 
         input_df = pd.DataFrame([input_dict])
-        input_processed = preprocessor.transform(input_df)
+        processed = preprocessor.transform(input_df)
 
-        pred = model.predict(input_processed)[0]
-        prob = model.predict_proba(input_processed)[0][1]
+        pred = model.predict(processed)[0]
+        prob = model.predict_proba(processed)[0][1]
 
-        st.subheader("📊 Prediction Result")
+        st.subheader("Prediction Result")
 
-        st.progress(int(prob * 100))
-        st.caption(f"Churn Probability: {prob*100:.2f}%")
+        # Gauge Chart
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=prob*100,
+            title={'text': "Churn Risk %"},
+            gauge={'axis': {'range': [0, 100]},
+                   'bar': {'color': "#f87171" if prob > 0.5 else "#38bdf8"}}
+        ))
+
+        st.plotly_chart(fig, use_container_width=True)
 
         if pred == 1:
-            st.error(f"⚠️ Customer is likely to CHURN")
+            st.error("⚠️ High Risk Customer – Likely to Churn")
         else:
-            st.success(f"✅ Customer is likely to STAY")
-
-    st.markdown('</div>', unsafe_allow_html=True)
+            st.success("✅ Customer Retention Likely")
