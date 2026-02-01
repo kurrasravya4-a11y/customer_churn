@@ -40,12 +40,14 @@ num_cols = joblib.load("num_cols.pkl")
 metrics_df = pd.read_csv("model_metrics.csv")
 
 st.title("🚀 Telecom AI Churn Studio")
+menu = st.sidebar.radio(
+    "📌 Navigation",
+    ["📊 Dashboard",
+     "📈 Data Insights",
+     "🤖 Model Evaluation",
+     "🔮 Smart Prediction"]
+)
 
-menu = st.sidebar.selectbox("Navigation", 
-                            ["📊 Dashboard", 
-                             "📈 Data Insights", 
-                             "🤖 Model Evaluation", 
-                             "🔮 Smart Prediction"])
 
 # =========================
 # DASHBOARD PAGE
@@ -158,3 +160,4 @@ elif menu == "🔮 Smart Prediction":
             st.error("⚠️ High Risk Customer – Likely to Churn")
         else:
             st.success("✅ Customer Retention Likely")
+
