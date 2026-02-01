@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Telecom AI Churn Studio", layout="wide")
 
 # =========================
-# Custom Dark Theme Styling
+# Dark Theme Styling
 # =========================
 st.markdown("""
 <style>
@@ -20,6 +20,7 @@ h1, h2, h3 {color: #38bdf8;}
     border-radius: 10px;
     font-weight: bold;
 }
+hr {border: 1px solid #334155;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -37,18 +38,18 @@ st.title("🚀 Telecom AI Churn Studio")
 
 menu = st.sidebar.radio(
     "📌 Navigation",
-    ["📊 Dashboard",
-     "📈 Data Insights",
-     "🤖 Model Evaluation",
-     "🔮 Smart Prediction"]
+    ["📊 Executive Dashboard",
+     "📈 Data Insights & Analysis",
+     "🤖 Model Performance",
+     "🔮 Churn Prediction"]
 )
 
 # =========================
-# DASHBOARD PAGE
+# DASHBOARD
 # =========================
-if menu == "📊 Dashboard":
+if menu == "📊 Executive Dashboard":
 
-    st.subheader("📌 Business Overview")
+    st.subheader("📌 Key Business Metrics")
 
     total_customers = df.shape[0]
     churn_rate = round((df["Churn Value"].mean()) * 100, 2)
@@ -57,13 +58,12 @@ if menu == "📊 Dashboard":
     col1, col2, col3 = st.columns(3)
 
     col1.metric("👥 Total Customers", total_customers)
-    col2.metric("📉 Churn Rate", f"{churn_rate}%")
-    col3.metric("💰 Avg Monthly Charges", f"${avg_monthly}")
+    col2.metric("📉 Overall Churn Rate", f"{churn_rate}%")
+    col3.metric("💰 Avg Monthly Revenue", f"${avg_monthly}")
 
     st.markdown("---")
 
-    # Customer Distribution
-    st.subheader("📊 Customer Distribution")
+    st.subheader("📊 Customer Churn Distribution")
 
     fig = px.pie(
         df,
@@ -75,25 +75,24 @@ if menu == "📊 Dashboard":
 
     st.markdown("---")
 
-    # Statistical Summary
-    st.subheader("📈 Statistical Summary")
+    st.subheader("📈 Statistical Summary (Numerical Features)")
 
     numeric_df = df.select_dtypes(include=["int64", "float64"])
     st.dataframe(numeric_df.describe().T, use_container_width=True)
 
     st.markdown("---")
 
-    # Dataset Preview
-    st.subheader("📄 Sample Dataset Preview")
+    st.subheader("📄 Dataset Sample Preview")
     st.dataframe(df.head(10), use_container_width=True)
 
 
 # =========================
-# DATA INSIGHTS PAGE
+# DATA INSIGHTS
 # =========================
-elif menu == "📈 Data Insights":
+elif menu == "📈 Data Insights & Analysis":
 
-    st.subheader("Tenure Impact on Churn")
+    st.subheader("📊 Tenure Impact on Churn")
+
     fig1 = px.box(
         df,
         x="Churn Label",
@@ -103,7 +102,8 @@ elif menu == "📈 Data Insights":
     )
     st.plotly_chart(fig1, use_container_width=True)
 
-    st.subheader("Monthly Charges Distribution")
+    st.subheader("💰 Monthly Charges Distribution")
+
     fig2 = px.histogram(
         df,
         x="Monthly Charges",
@@ -113,7 +113,8 @@ elif menu == "📈 Data Insights":
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-    st.subheader("Contract Type vs Churn")
+    st.subheader("📑 Contract Type vs Churn")
+
     fig3 = px.histogram(
         df,
         x="Contract",
@@ -123,28 +124,59 @@ elif menu == "📈 Data Insights":
     )
     st.plotly_chart(fig3, use_container_width=True)
 
+    st.markdown("---")
+
+    # =========================
+    # Correlation Heatmap
+    # =========================
+    st.subheader("🔥 Correlation Heatmap")
+
+    corr_df = df[[
+        "Tenure Months",
+        "Monthly Charges",
+        "Total Charges",
+        "CLTV",
+        "Churn Value"
+    ]].copy()
+
+    corr_df["Total Charges"] = pd.to_numeric(
+        corr_df["Total Charges"],
+        errors="coerce"
+    )
+
+    corr_matrix = corr_df.corr()
+
+    heatmap = px.imshow(
+        corr_matrix,
+        text_auto=True,
+        color_continuous_scale="RdBu_r",
+        aspect="auto"
+    )
+
+    st.plotly_chart(heatmap, use_container_width=True)
+
 
 # =========================
-# MODEL EVALUATION PAGE
+# MODEL PERFORMANCE
 # =========================
-elif menu == "🤖 Model Evaluation":
+elif menu == "🤖 Model Performance":
 
-    st.subheader("📊 Model Comparison Metrics")
+    st.subheader("📊 Model Evaluation Metrics")
     st.dataframe(metrics_df.round(4), use_container_width=True)
 
-    st.subheader("Confusion Matrix")
+    st.subheader("🧩 Confusion Matrix")
     st.image("confusion_matrix.png", use_column_width=True)
 
-    st.subheader("ROC Curve")
+    st.subheader("📈 ROC Curve")
     st.image("roc_curve.png", use_column_width=True)
 
 
 # =========================
-# SMART PREDICTION PAGE
+# PREDICTION
 # =========================
-elif menu == "🔮 Smart Prediction":
+elif menu == "🔮 Churn Prediction":
 
-    st.subheader("Enter Customer Details")
+    st.subheader("🧾 Enter Customer Information")
 
     col1, col2 = st.columns(2)
 
@@ -163,7 +195,7 @@ elif menu == "🔮 Smart Prediction":
             ["DSL", "Fiber optic", "No"]
         )
 
-    if st.button("Analyze Customer"):
+    if st.button("Analyze Churn Risk"):
 
         input_dict = {
             col: 0 if col in num_cols else "Unknown"
@@ -182,9 +214,9 @@ elif menu == "🔮 Smart Prediction":
         pred = model.predict(processed)[0]
         prob = model.predict_proba(processed)[0][1]
 
-        st.subheader("📊 Prediction Result")
+        st.subheader("📊 Prediction Outcome")
 
-        fig = go.Figure(go.Indicator(
+        gauge = go.Figure(go.Indicator(
             mode="gauge+number",
             value=prob * 100,
             title={'text': "Churn Risk %"},
@@ -196,7 +228,7 @@ elif menu == "🔮 Smart Prediction":
             }
         ))
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(gauge, use_container_width=True)
 
         if pred == 1:
             st.error("⚠️ High Risk Customer – Likely to Churn")
